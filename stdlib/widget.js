@@ -1,50 +1,7 @@
-/**
-Base Class from which almost all widgets are based overall the project
+/*
+    Based on: https://github.com/noeldelgado/shadowlord/blob/23f8799f82d259e0354dd58f36bbcbc6d608da02/dist/js/app.js#L902-L1193
+*/
 
-The main idea behind constructing a new widget toolkit instead of using one of the many high quality widget
-toolkits avaliable is that we considered that currently, no widget system provides all the features that where
-required for this project.
-
-Features of the widget system
-* A custom and easy to handle event binding, dispatching and manipulation, with some sort of bubbling support
-* A module system which we can use to include specific behaviour to any widget and reuse the code where needed
-* A tree structure support for the widgets that the event system could bubble, and that also serves as
-* A navigation system.
-* The widgets must be able to be grouped to form more complex widgets
-* Remove the complexity of DOM manipulation and handling
-* A way to wrap widgets at our convenience to reuse widgets avaliable and make them comly to our needs
-without the need to hack those widgets, that would force us to maintain the new versions of those widgets
-and that is a very complex task when widgets become so complex.
-* A widget system that would allow us to start wrapping some widgets for a fast start and later code our own widgets
-at will.
-* expose a consistent API that allow us to choose the use of widgets by API calls and user interaction at will and with the same
-clearance and capacity
-* an easy way to allow subclasing widgets
-* an easy way to provide new html, class, and css for a specific instance of a widget that would remove us the need
-to create complex inheritance structures that are hard to maintain.
-
-Usage Example.
-
-The most basic usage of a widget is to simply create an instance and render it at a target element
-in this case body
-var myWidgetInstance = new Breezi.Widget();
-myWidgetInstance.render(document.body);
-
-like this widget does renders does not display anything so lets give it something to display first
-var myWidgetInstance = new Breezi.Widget();
-myWidgetInstance.element.html('Im a simple widget');
-myWidgetInstance.render(document.body);
-
-this reveals that internally every widget has an element property that is initialized by default to a jQuery Instance
-this allow easy DOM manipulation, animation and operations handled by a high quality third party library.
-@class Widget
-@namespace Breezi
-@inlcudes CustomEventSupport
-@includes NodeSupport
-@dependency Neon
-@dependency CustomEventSupport
-@dependency NodeSupport
-**/
 Class('Widget').includes(CustomEventSupport, NodeSupport)({
 
     /**
@@ -87,19 +44,28 @@ Class('Widget').includes(CustomEventSupport, NodeSupport)({
         __destroyed : false,
 
         init : function init(config) {
-            var property;
+            var property, temporalElement;
 
             Object.keys(config || {}).forEach(function (propertyName) {
                 this[propertyName] = config[propertyName];
             }, this);
 
             if (this.element == null) {
-                this.element = $(this.constructor.HTML.replace(/\s\s+/g, ''));
-                this.element.addClass(this.constructor.ELEMENT_CLASS);
+                temporalElement = document.createElement('div');
+                temporalElement.innerHTML = this.constructor.HTML.replace(/\s\s+/g, '');
+                this.element = temporalElement.firstChild;
+
+                this.constructor.ELEMENT_CLASS.split(' ').forEach(function(className) {
+                    this.element.classList.add(className);
+                }, this);
+
+                temporalElement = null;
             }
 
             if (this.hasOwnProperty('className') === true) {
-                this.element.addClass(this.className);
+                this.className.split(' ').forEach(function(className) {
+                    this.element.classList.add(className);
+                }, this);
             }
         },
 
@@ -111,7 +77,7 @@ Class('Widget').includes(CustomEventSupport, NodeSupport)({
         **/
         _activate : function _activate() {
             this.active = true;
-            this.element.addClass('active');
+            this.element.classList.add('active');
         },
 
         /**
@@ -146,7 +112,7 @@ Class('Widget').includes(CustomEventSupport, NodeSupport)({
         **/
         _deactivate : function _deactivate() {
             this.active = false;
-            this.element.removeClass('active');
+            this.element.classList.remove('active');
         },
 
         /**
@@ -181,7 +147,7 @@ Class('Widget').includes(CustomEventSupport, NodeSupport)({
         **/
         _enable : function _enable() {
             this.disabled = false;
-            this.element.removeClass('disable');
+            this.element.classList.remove('disable');
         },
 
         /**
@@ -209,7 +175,7 @@ Class('Widget').includes(CustomEventSupport, NodeSupport)({
         **/
         _disable : function _disable() {
             this.disabled = true;
-            this.element.addClass('disable');
+            this.element.classList.add('disable');
         },
 
         /**
@@ -248,7 +214,9 @@ Class('Widget').includes(CustomEventSupport, NodeSupport)({
             var childrenLength;
 
             if (this.element) {
-                this.element.remove();
+                if (this.element.parentNode) {
+                    this.element.parentNode.removeChild(this.element);
+                }
             }
 
             if (this.children !== null){
@@ -266,8 +234,8 @@ Class('Widget').includes(CustomEventSupport, NodeSupport)({
                 this.parent.removeChild(this);
             }
 
-            this.children       = null;
-            this.element        = null;
+            this.children = null;
+            this.element = null;
         },
 
         /**
@@ -303,7 +271,7 @@ Class('Widget').includes(CustomEventSupport, NodeSupport)({
         @method
         @argument element <required> [JQuery] (undefined) This is the element
         into which the widget will be appended.
-        @argument beforeElement <optional> [jQuery] (undefined) this is the element
+        @argument beforeElement <optional> [HTMLDOMElement] (undefined) this is the element
         that will be used as a reference to insert the widgets element. this argument
         must be a child of the "element" argument.
         @return this [Widget]
@@ -317,9 +285,9 @@ Class('Widget').includes(CustomEventSupport, NodeSupport)({
                 beforeElement : beforeElement
             });
             if (beforeElement) {
-                this.element.insertBefore(beforeElement);
+                element.insertBefore(this.element, beforeElement);
             } else {
-                this.element.appendTo(element);
+                element.appendChild(this.element);
             }
             this.dispatch('render');
             return this;
