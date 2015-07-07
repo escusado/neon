@@ -211,7 +211,25 @@ Class('Widget').includes(CustomEventSupport, NodeSupport)({
         @return undefined [undefined]
         **/
         _destroy : function _destroy() {
+
+        },
+
+        /**
+        Destroy public method, this one should not be replaced
+        @property destroy <public> [Function]
+        @method
+        @return null [null]
+        **/
+        destroy : function destroy() {
             var childrenLength;
+
+            if (this.__destroyed === true) {
+                console.warn('calling on destroyed object');
+            }
+
+            this.dispatch('beforeDestroy');
+
+            this._destroy();
 
             if (this.element) {
                 if (this.element.parentNode) {
@@ -236,21 +254,7 @@ Class('Widget').includes(CustomEventSupport, NodeSupport)({
 
             this.children = null;
             this.element = null;
-        },
 
-        /**
-        Destroy public method, this one should not be replaced
-        @property destroy <public> [Function]
-        @method
-        @return null [null]
-        **/
-        destroy : function destroy() {
-            if (this.__destroyed === true) {
-                console.warn('calling on destroyed object');
-            }
-
-            this.dispatch('beforeDestroy');
-            this._destroy();
             this.dispatch('destroy');
 
             this.eventListeners = null;
